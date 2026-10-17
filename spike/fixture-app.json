@@ -1,0 +1,41 @@
+{
+  "expo": {
+    "name": "fixture",
+    "slug": "fixture",
+    "version": "1.0.0",
+    "ios": {
+      "bundleIdentifier": "com.example.fixture"
+    },
+    "android": {
+      "package": "com.example.fixture"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Camera please",
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Location please"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          },
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
+      "./plugins/withDangerousPodfile.js",
+      "./plugins/withXcodeResource.js"
+    ]
+  }
+}
