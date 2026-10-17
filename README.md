@@ -96,7 +96,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - uses: FladioArmandika/expo-plugin-blame@main
+      - uses: FladioArmandika/expo-plugin-blame@v1
 ```
 
 It runs on plain Linux, since nothing gets compiled. One comment per PR, updated on each push, and no comment at all while a PR doesn't touch native output. The report also goes to the job summary, which is where PRs from forks get it.
