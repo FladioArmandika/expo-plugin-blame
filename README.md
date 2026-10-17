@@ -118,3 +118,7 @@ scripts/record-gif.cjs   re-records docs/report.gif
 ```
 
 The end-to-end tests run real `expo prebuild`s on `test/fixtures/basic`. Run `npm install` in that folder first, or they're skipped. To try the demo, run `npm install` in `examples/demo`, then `node dist/cli.js examples/demo --html`.
+
+## License
+
+[MIT](LICENSE)
