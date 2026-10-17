@@ -2,7 +2,9 @@
 
 **`git blame` for `expo prebuild`. See which config plugin wrote which lines in your `android/` and `ios/` folders.**
 
-> 🚧 **Work in progress.** The CLI works and is tested against real prebuilds, but it isn't on npm yet and the HTML report is still to come.
+![The HTML report: every line of the generated native files, coloured by the plugin that wrote it](docs/report.gif)
+
+> 🚧 **Work in progress.** It works and is tested against real prebuilds, but it isn't on npm yet.
 
 ## Why
 
@@ -20,26 +22,32 @@ Something weird shows up in your `AndroidManifest.xml` or `project.pbxproj` afte
 
 ## What it looks like
 
-```
-$ npx prebuild-blame
+This is the real output on [examples/demo](examples/demo), a fresh SDK 58 app with a few plugins:
 
-prebuild-blame · SDK 58 · 5 plugins · 6 prebuilds in 4.5s
+```
+$ npx prebuild-blame --html
+
+prebuild-blame · SDK 58 · 7 plugins · 8 prebuilds in 4.2s
   expo-camera                        AndroidManifest.xml +2, Info.plist +4
   expo-location                      AndroidManifest.xml +2, Info.plist +13
   expo-build-properties              gradle.properties +1, Podfile.properties.json +5 -1
+  ./plugins/withCameraCopy.ts        Info.plist +1 -1
+  ./plugins/withMinSdk24.ts          no native changes
   ./plugins/withDangerousPodfile.ts  Podfile +2
   ./plugins/withXcodeResource.ts     project.pbxproj +4, extra.json +1 (new)
+  ⚠ Info.plist: ./plugins/withCameraCopy.ts changed lines written by expo-camera
   · AndroidManifest.xml touched by expo-camera, expo-location
-  · Info.plist touched by expo-camera, expo-location
+Report: prebuild-blame.html
 ```
 
-That's the real output on the test fixture, a fresh SDK 58 app. Files touched by more than one plugin get a `·` note. When a plugin actually rewrites lines another plugin wrote, you get a warning instead:
+The HTML report (the GIF above) is a single file you can open anywhere. **By file** shows every generated file with each line coloured by the plugin that wrote it. **By plugin** shows each plugin's diff. Click a plugin to highlight its lines.
 
-```
-  ⚠ Info.plist: withAnonymous changed lines written by expo-camera
-```
+### Reading the output
 
-Installed packages that Expo applies on its own, without being in your `plugins` list, show up as their own steps marked `(auto)`.
+- **⚠ changed lines written by…** means a plugin rewrote lines another plugin wrote. Here, `withCameraCopy` replaced expo-camera's permission text. That's on purpose here, but it's exactly how plugins break each other by accident.
+- **· touched by…** means several plugins edit the same file, on different lines. Usually fine, and worth knowing about.
+- **no native changes** on a plugin that should change something means its edit got lost. `withMinSdk24` sets `minSdkVersion` to 24, but when two plugins edit the same file through the same kind of mod, Expo runs the later plugin's edit *first*. So expo-build-properties, declared earlier, wins and writes 26. Plain `git diff` would never show you that.
+- **(auto)** marks packages Expo applies on its own because they're installed, even though they aren't in your `plugins` list.
 
 ## Usage
 
@@ -55,6 +63,7 @@ Once it's published, it'll be `npx prebuild-blame` in your project.
 
 | Flag | What it does |
 | --- | --- |
+| `--html [file]` | Write the HTML report (default `prebuild-blame.html`) |
 | `--platform ios\|android\|all` | Only prebuild one platform (default `all`) |
 | `--only a,b` | Only report these plugins. Earlier plugins still run. |
 | `--json <file>` | Write the full result, including per-line blame and patches. Use `-` for stdout. |
@@ -69,7 +78,7 @@ Works with `app.json` and with `app.config.ts`/`.js`, including inline function 
 - [x] Per-plugin steps that keep Expo's auto-applied plugins out of the baseline
 - [x] CLI: temp workspace, parallel prebuilds, line-level blame, terminal summary, JSON output
 - [x] Overlap and conflict flags
-- [ ] Colour-coded HTML report
+- [x] Colour-coded HTML report
 - [ ] Cache the baseline between runs
 - [ ] `--base <git-ref>` to compare native output between two commits
 - [ ] GitHub Action that posts the summary on PRs
@@ -97,12 +106,15 @@ src/
   prebuild.ts            runs expo prebuild, in parallel
   snapshot.ts            reads android/ and ios/, normalizes pbxproj
   blame.ts               line-level attribution and overlaps
-  report/terminal.ts     the summary above
+  report/terminal.ts     the terminal summary
+  report/html.ts         the HTML report
   normalize/pbxproj.ts   stable Xcode object ids
   steps.ts               which plugins run at each step
   runtime/app-config.ts  loaded by Expo inside each temp copy
 test/
   fixtures/basic/        small Expo app with real and local plugins
+examples/demo/           the app behind the output and GIF above
+scripts/record-gif.cjs   re-records docs/report.gif
 ```
 
-The end-to-end tests run real `expo prebuild`s on `test/fixtures/basic`. Run `npm install` in that folder first, or they're skipped.
+The end-to-end tests run real `expo prebuild`s on `test/fixtures/basic`. Run `npm install` in that folder first, or they're skipped. To try the demo, run `npm install` in `examples/demo`, then `node dist/cli.js examples/demo --html`.

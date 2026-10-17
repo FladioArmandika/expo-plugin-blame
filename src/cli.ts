@@ -2,6 +2,7 @@ import { writeFileSync } from 'node:fs';
 import { styleText } from 'node:util';
 import { defineCommand, runMain } from 'citty';
 import type { Platform } from './prebuild.js';
+import { renderHtml } from './report/html.js';
 import { formatTerminal } from './report/terminal.js';
 import { run } from './run.js';
 
@@ -16,6 +17,7 @@ const main = defineCommand({
     dir: { type: 'positional', description: 'Expo project directory', required: false, default: '.' },
     platform: { type: 'string', description: 'ios, android or all', default: 'all' },
     only: { type: 'string', description: 'Comma-separated plugins to report (earlier plugins still run)' },
+    html: { type: 'string', description: 'Write the colour-coded HTML report (default file: prebuild-blame.html)' },
     json: { type: 'string', description: 'Write the full result as JSON to this file (- for stdout)' },
     concurrency: { type: 'string', description: 'Prebuilds to run at once (default: CPU count)' },
     'keep-temp': { type: 'boolean', description: 'Keep the temp copies for inspection', default: false },
@@ -32,7 +34,7 @@ const main = defineCommand({
   },
 });
 
-type Args = { dir: string; platform: string; only?: string; json?: string; concurrency?: string; 'keep-temp': boolean };
+type Args = { dir: string; platform: string; only?: string; html?: string | boolean; json?: string; concurrency?: string; 'keep-temp': boolean };
 
 async function blameCommand(args: Args) {
   const platform = args.platform as Platform;
@@ -56,9 +58,14 @@ async function blameCommand(args: Args) {
     if (toStdout) process.stdout.write(json + '\n');
     else writeFileSync(args.json, json + '\n');
   }
+  // `--html` with no value writes to the default file name.
+  const htmlFile = args.html === true || args.html === '' ? 'prebuild-blame.html' : args.html || undefined;
+  if (htmlFile) writeFileSync(htmlFile, renderHtml(result));
+
   if (!toStdout) {
     const only = args.only?.split(',').map((s) => s.trim()).filter(Boolean);
     console.log(formatTerminal(result, { color: process.stdout.isTTY, only }));
+    if (htmlFile) console.log(`Report: ${htmlFile}`);
     if (args.json) console.log(`JSON: ${args.json}`);
     if (result.tempDir) console.log(`Temp copies kept in ${result.tempDir}`);
   }

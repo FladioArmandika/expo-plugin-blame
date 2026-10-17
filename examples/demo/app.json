@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "my-expo-app",
+    "slug": "my-expo-app",
+    "version": "1.0.0",
+    "ios": {
+      "bundleIdentifier": "com.example.demo"
+    },
+    "android": {
+      "package": "com.example.demo"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "recordAudioAndroid": true
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Location please"
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 26
+          },
+          "ios": {
+            "deploymentTarget": "16.4"
+          }
+        }
+      ],
+      "./plugins/withCameraCopy.ts",
+      "./plugins/withMinSdk24.ts",
+      "./plugins/withDangerousPodfile.ts",
+      "./plugins/withXcodeResource.ts"
+    ]
+  }
+}
