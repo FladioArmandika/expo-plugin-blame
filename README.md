@@ -1,32 +1,52 @@
 # expo-plugin-blame
 
-[![npm](https://img.shields.io/npm/v/expo-plugin-blame)](https://www.npmjs.com/package/expo-plugin-blame) [![CI](https://github.com/FladioArmandika/expo-plugin-blame/actions/workflows/ci.yml/badge.svg)](https://github.com/FladioArmandika/expo-plugin-blame/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/expo-plugin-blame)](https://www.npmjs.com/package/expo-plugin-blame) [![CI](https://github.com/FladioArmandika/expo-plugin-blame/actions/workflows/ci.yml/badge.svg)](https://github.com/FladioArmandika/expo-plugin-blame/actions/workflows/ci.yml) [![license](https://img.shields.io/npm/l/expo-plugin-blame)](LICENSE)
 
-**`git blame` for `expo prebuild`. See which config plugin wrote which lines in your `android/` and `ios/` folders.**
+**`git blame` for `expo prebuild`.** Find out which config plugin wrote every line in your `android/` and `ios/` folders, and catch plugins quietly undoing each other's work.
+
+```sh
+npx expo-plugin-blame --html
+```
 
 ![The HTML report: every line of the generated native files, coloured by the plugin that wrote it](https://raw.githubusercontent.com/FladioArmandika/expo-plugin-blame/main/docs/report.gif)
 
-## Why
+## Sound familiar?
 
-Something weird shows up in your `AndroidManifest.xml` or `project.pbxproj` after prebuild, and you have no idea which plugin put it there. Expo's debugging tools show you the config, not the native files. `git diff` tells you *what* changed, but not *who* did it.
+With Continuous Native Generation, nobody writes `android/` and `ios/` by hand. A dozen plugins write them for you, and when something looks off there's no history to ask. Here's what expo-plugin-blame says about three classic mysteries, taken from the [demo app](examples/demo):
 
-## How it works
+> **"Why does my Android app ask for the microphone?"**
+> ```
+> expo-camera                        AndroidManifest.xml +2, Info.plist +4
+> ```
+> Open the report and the `RECORD_AUDIO` line is coloured `expo-camera`. It adds the permission unless you set `recordAudioAndroid: false`.
 
-1. Copies your project to a temp folder, with `node_modules` symlinked instead of copied. Your real project is never touched.
-2. Runs prebuild with none of your plugins, then again with one more plugin each time, in the order you declared them.
-3. Diffs each run against the one before, so every change lands on the plugin that introduced it.
-4. Normalizes `project.pbxproj` first, so random Xcode UUIDs don't show up as fake changes.
-5. Flags files touched by more than one plugin, which is where plugins tend to step on each other.
+> **"I set `minSdkVersion` to 24 and the build still says 26."**
+> ```
+> ./plugins/withMinSdk24.ts          no native changes
+> ```
+> Your plugin ran, and its edit was lost. When two plugins use the same kind of mod, Expo runs the later plugin's edit *first*, so `expo-build-properties` (declared earlier) wins. No diff would ever show you that.
 
-**The sneaky part:** Expo quietly auto-applies some plugins, like `expo-camera` and `expo-location`, whenever the package is installed. That means a naive "no plugins" baseline still contains them. expo-plugin-blame keeps them out of the baseline so their changes are blamed on the right name. The details are in [docs/risk-checks.md](docs/risk-checks.md).
+> **"Who changed my camera permission text?"**
+> ```
+> ⚠ Info.plist: ./plugins/withCameraCopy.ts changed lines written by expo-camera
+> ```
+> Two plugins wrote the same line, and the later one won. Here it's on purpose. Usually it isn't.
 
-## What it looks like
+## Quick start
 
-This is the real output on [examples/demo](examples/demo), a fresh SDK 58 app with a few plugins:
+In any Expo project with dependencies installed:
+
+```sh
+npx expo-plugin-blame              # who wrote what, in the terminal
+npx expo-plugin-blame --html       # plus a colour-coded report you can click through
+npx expo-plugin-blame --base main  # what this branch changes, and which plugin did it
+```
+
+It works on a temporary copy, so your project and its `android/` and `ios/` folders are never touched. Node 22.13+ (same as Expo SDK 58).
+
+### Reading the output
 
 ```
-$ npx expo-plugin-blame --html
-
 expo-plugin-blame · SDK 58 · 7 plugins · 8 prebuilds in 4.2s
   expo-camera                        AndroidManifest.xml +2, Info.plist +4
   expo-location                      AndroidManifest.xml +2, Info.plist +13
@@ -40,73 +60,22 @@ expo-plugin-blame · SDK 58 · 7 plugins · 8 prebuilds in 4.2s
 Report: expo-plugin-blame.html
 ```
 
-The HTML report (the GIF above) is a single file you can open anywhere. **By file** shows every generated file with each line coloured by the plugin that wrote it. **By plugin** shows each plugin's diff. Click a plugin to highlight its lines.
-
-### Reading the output
-
-- **⚠ changed lines written by…** means a plugin rewrote lines another plugin wrote. Here, `withCameraCopy` replaced expo-camera's permission text. That's on purpose here, but it's exactly how plugins break each other by accident.
-- **· touched by…** means several plugins edit the same file, on different lines. Usually fine, and worth knowing about.
-- **no native changes** on a plugin that should change something means its edit got lost. `withMinSdk24` sets `minSdkVersion` to 24, but when two plugins edit the same file through the same kind of mod, Expo runs the later plugin's edit *first*. So expo-build-properties, declared earlier, wins and writes 26. Plain `git diff` would never show you that.
-- **(auto)** marks packages Expo applies on its own because they're installed, even though they aren't in your `plugins` list.
-
-## Usage
-
-Run it in your Expo project, with dependencies installed:
-
-```sh
-npx expo-plugin-blame          # summary in the terminal
-npx expo-plugin-blame --html   # plus the colour-coded report
-```
-
-Nothing to set up, and your `android/` and `ios/` folders are never touched. (It was called `prebuild-blame` up to 0.1.0.)
-
-| Flag | What it does |
+| You see | It means |
 | --- | --- |
-| `--base <git-ref>` | Compare the native output with a branch, tag or commit. See below. |
-| `--html [file]` | Write the HTML report (default `expo-plugin-blame.html`) |
-| `--platform ios\|android\|all` | Only prebuild one platform (default `all`) |
-| `--only a,b` | Only report these plugins. Earlier plugins still run. |
-| `--json <file>` | Write the full result, including per-line blame and patches. Use `-` for stdout. |
-| `--markdown <file>` | Write a Markdown summary, sized for a PR comment. Use `-` for stdout. |
-| `--concurrency <n>` | Prebuilds to run at once (default: CPU count) |
-| `--no-cache` | Run every prebuild, even ones cached from an earlier run |
-| `--keep-temp` | Keep the temp copies so you can poke around |
+| `⚠ changed lines written by…` | A plugin overwrote another plugin's lines. Worth a look every time. |
+| `· touched by…` | Several plugins edit one file, on different lines. Usually fine. |
+| `no native changes` | Either the plugin has nothing to do, or its edit got lost. |
+| `(auto)` | Expo applies this package's plugin because it's installed, even though it isn't in your `plugins` list. |
 
-Works with `app.json` and with `app.config.ts`/`.js`, including inline function plugins. Requires Node 22.13+ (the same as Expo SDK 58) and your project's dependencies installed. It's tested on SDK 58 so far.
+The HTML report is one self-contained file. **By file** colours every line by the plugin that wrote it, **By plugin** shows each plugin's diff, and clicking a plugin highlights its lines everywhere.
 
-### Caching
+## Review native changes on every PR
 
-Each prebuild's output is cached in `node_modules/.cache/expo-plugin-blame`, so a second run with nothing changed takes about half a second. Editing one plugin only re-runs the steps from that plugin onwards: tweak your last local plugin and it's one prebuild instead of eight. With `--base`, the base side is usually all cached too.
+Upgrading a plugin or tweaking `app.config.ts` changes native code that nobody sees in review, because `android/` and `ios/` aren't committed. The GitHub Action fixes that: every PR that changes the generated files gets a comment saying what changed and which plugin did it.
 
-The key covers your project files, the installed dependencies, the plugin options and this tool's own version. Anything else that changes the output gets missed, like a plugin reading an environment variable, or a local plugin importing another plugin file. Use `--no-cache` when you suspect it. Entries unused for two weeks are cleaned up.
+<img src="https://raw.githubusercontent.com/FladioArmandika/expo-plugin-blame/main/docs/pr-comment.png" width="640" alt="A pull request comment from expo-plugin-blame: a table of plugins and the native files they changed, and an expanded Info.plist diff where a custom location permission was reset to Expo's default">
 
-### Comparing with a branch: `--base`
-
-`--base main` answers "what does this branch do to the native folders, and which plugin is responsible?" It checks `main` out into a temporary git worktree, blames both versions, and diffs the final output:
-
-```
-$ npx expo-plugin-blame --base main
-
-expo-plugin-blame · main (e3c1fda) → working tree · SDK 58 · 15 prebuilds in 6.8s
-  expo-camera                                  AndroidManifest.xml -1
-  expo-build-properties                        Podfile.properties.json +1 -1, project.pbxproj +2 -2
-  expo-location (auto)                         Info.plist +1 -1
-  ./plugins/withDangerousPodfile.ts (removed)  Podfile -2
-  · project.pbxproj is now touched by expo-build-properties, ./plugins/withXcodeResource.ts
-  5 generated files changed
-```
-
-Here the branch turned off `recordAudioAndroid`, bumped the iOS deployment target, dropped a plugin, and removed `expo-location` from `plugins`. That last one is a nice catch: Expo still applies it because the package is installed, but your custom permission text is gone.
-
-- Changed plugin options and changed plugin versions both show up under the plugin's name. **(new)** and **(removed)** mark plugins only one side has. **Expo defaults** is the template itself, which mostly changes on SDK upgrades.
-- Only overlaps that are new on your branch are flagged.
-- If `package.json` and the lockfile are unchanged, the base reuses your `node_modules`. Otherwise it installs the base's dependencies with your package manager (lifecycle scripts skipped), which takes longer.
-- In CI, the base ref has to be fetched. With `actions/checkout`, set `fetch-depth: 0`.
-- `--markdown pr.md` writes the same summary with collapsible diffs, ready to post as a PR comment.
-
-### On pull requests: the GitHub Action
-
-Add this workflow and every PR gets a comment showing what it does to `android/` and `ios/`, and which plugin did it. The comment is updated on each push, and nothing is posted while a PR has no native changes.
+That's a real run: the branch removed `expo-location` from `plugins`. Expo still applies it because the package is installed, but without your options, so the custom permission text quietly went back to the default.
 
 ```yaml
 # .github/workflows/expo-plugin-blame.yml
@@ -130,41 +99,105 @@ jobs:
       - uses: FladioArmandika/expo-plugin-blame@main
 ```
 
-It runs on Linux, since prebuild only generates files and nothing gets compiled. The report also lands in the job summary, which is where you'll find it for PRs from forks, because GitHub doesn't let those post comments.
+It runs on plain Linux, since nothing gets compiled. One comment per PR, updated on each push, and no comment at all while a PR doesn't touch native output. The report also goes to the job summary, which is where PRs from forks get it.
+
+<details>
+<summary>Inputs and outputs</summary>
 
 | Input | Default | What it does |
 | --- | --- | --- |
 | `working-directory` | `.` | The Expo project folder, for monorepos |
 | `base` | the PR's base branch | Any branch, tag or commit to compare with |
 | `platform` | `all` | `ios`, `android` or `all` |
-| `comment` | `true` | Set to `false` to only write the job summary |
+| `comment` | `true` | `false` writes only the job summary |
 
-Outputs: `changed` (`true` or `false`), `markdown-file` and `json-file`. Use them to fail the job or post somewhere else.
+Outputs: `changed` (`true` or `false`), `markdown-file` and `json-file`, for failing the job or posting the report somewhere else.
 
-## Status
+</details>
 
-- [x] Stable `project.pbxproj` normalization
-- [x] Per-plugin steps that keep Expo's auto-applied plugins out of the baseline
-- [x] CLI: temp workspace, parallel prebuilds, line-level blame, terminal summary, JSON output
-- [x] Overlap and conflict flags
-- [x] Colour-coded HTML report
-- [x] Cache each step's prebuild between runs
-- [x] `--base <git-ref>` to compare native output with another commit, plus `--markdown`
-- [x] GitHub Action that posts the summary on PRs
+## Compare with any branch
 
-## Not in scope
+The same comparison works locally:
 
-It doesn't fix anything, run native builds, or support bare React Native without Expo prebuild. It just tells you who did what.
+```
+$ npx expo-plugin-blame --base main
 
-## Development
+expo-plugin-blame · main (e3c1fda) → working tree · SDK 58 · 15 prebuilds in 6.8s
+  expo-camera                                  AndroidManifest.xml -1
+  expo-build-properties                        Podfile.properties.json +1 -1, project.pbxproj +2 -2
+  expo-location (auto)                         Info.plist +1 -1
+  ./plugins/withDangerousPodfile.ts (removed)  Podfile -2
+  · project.pbxproj is now touched by expo-build-properties, ./plugins/withXcodeResource.ts
+  5 generated files changed
+```
 
-Written in TypeScript, built with tsup, and tested with Vitest.
+It checks `main` out into a temporary git worktree, blames both sides and diffs the result. Changed options and upgraded plugin versions show up under the plugin's name, **(new)** and **(removed)** mark plugins only one side has, and **Expo defaults** is the template itself, which mostly moves on SDK upgrades. If your dependencies differ from the base's, it installs the base's first (lifecycle scripts skipped). Add `--markdown pr.md` to get the PR comment as a file.
+
+## How it works
+
+```mermaid
+flowchart LR
+  A["prebuild with<br/>no plugins"] -- "diff = expo-camera" --> B["+ expo-camera"]
+  B -- "diff = expo-location" --> C["+ expo-location"]
+  C -- "…" --> D["+ every plugin"]
+```
+
+1. Copy the project to a temp folder, with `node_modules` symlinked.
+2. Run the real `expo prebuild` with no plugins, then again with one more plugin each time, in your order, in parallel.
+3. Diff each run against the one before. Whatever changed belongs to the plugin that was just added.
+4. Track every line through the steps, so a line that a later plugin rewrites is caught as an overwrite.
+
+Three things make that harder than it sounds:
+
+- **Expo auto-applies plugins.** Install `expo-camera` and its plugin runs even when it isn't in your list, so a naive "no plugins" baseline already has camera permissions. expo-plugin-blame keeps those out of the baseline until their own step, so they're blamed by name.
+- **Xcode ids are random.** Plugins that add files to `project.pbxproj` get fresh UUIDs on every run. They're renamed to content hashes before diffing, so only real changes show up.
+- **Prebuilds aren't free.** Each step's output is cached in `node_modules/.cache/expo-plugin-blame`. Run it twice and the second run takes half a second. Edit your last plugin and it re-runs one prebuild, not all of them.
+
+The research behind this, including how the auto-applied plugins work, is in [docs/risk-checks.md](docs/risk-checks.md).
+
+## Options
+
+| Flag | What it does |
+| --- | --- |
+| `--html [file]` | Write the HTML report (default `expo-plugin-blame.html`) |
+| `--base <git-ref>` | Compare with a branch, tag or commit |
+| `--markdown <file>` | Write a Markdown summary sized for a PR comment (`-` for stdout) |
+| `--json <file>` | Write everything, including per-line blame and patches (`-` for stdout) |
+| `--platform ios\|android\|all` | Only prebuild one platform (default `all`) |
+| `--only a,b` | Only report these plugins. Earlier plugins still run. |
+| `--concurrency <n>` | Prebuilds to run at once (default: CPU count) |
+| `--no-cache` | Run every prebuild, ignoring the cache |
+| `--keep-temp` | Keep the temp copies so you can poke around |
+
+## FAQ
+
+**Does it change my project?** No. Everything happens in temp copies that are deleted afterwards. The only thing written to your project is the cache in `node_modules/.cache`.
+
+**Does it work with `app.config.ts`?** Yes, including inline function plugins. `app.json` and `app.config.js` work too.
+
+**Which SDKs?** It's tested on SDK 58. It relies on public pieces of Expo's config plugin system, so nearby versions should work. Please open an issue if yours doesn't.
+
+**When should I use `--no-cache`?** When a plugin reads environment variables, or a local plugin imports another plugin's file. The cache key covers your project files, dependencies, plugin options and the tool's own version, but not those.
+
+**Bare React Native?** No. It explains what `expo prebuild` generates. It doesn't fix anything or run native builds either. It just tells you who did what.
+
+*expo-plugin-blame was called `prebuild-blame` up to 0.1.0.*
+
+## Contributing
+
+<details>
+<summary>Building, testing and the code layout</summary>
+
+Written in TypeScript, built with tsup and tested with Vitest.
 
 ```sh
 npm install
 npm run build && npm test
 npm run typecheck
+node dist/cli.js path/to/expo-app   # try your build on a project
 ```
+
+The end-to-end tests run real `expo prebuild`s on `test/fixtures/basic`. Run `npm install` in that folder first, or they're skipped. To try the demo, run `npm install` in `examples/demo`, then `node dist/cli.js examples/demo --html`.
 
 ```
 src/
@@ -191,7 +224,7 @@ scripts/record-gif.cjs   re-records docs/report.gif
 action.yml               the GitHub Action
 ```
 
-To try your local build on a project, run `node dist/cli.js path/to/expo-app`. The end-to-end tests run real `expo prebuild`s on `test/fixtures/basic`. Run `npm install` in that folder first, or they're skipped. To try the demo, run `npm install` in `examples/demo`, then `node dist/cli.js examples/demo --html`.
+</details>
 
 ## License
 
