@@ -3,6 +3,9 @@ import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
+import { spawnSync } from 'node:child_process';
+import { checkoutBase } from '../src/base.js';
+import { compare } from '../src/compare.js';
 import { run, type RunResult } from '../src/run.js';
 
 // Runs real prebuilds of test/fixtures/basic. Needs `npm install` in that folder
@@ -85,5 +88,30 @@ describe.skipIf(!ready)('prebuild-blame on real prebuilds', { timeout: 180_000 }
     expect(result.steps.map((s) => s.name)).toEqual(['expo-camera', 'withAnonymous', 'expo-location']);
     expect(result.overlaps.find((o) => o.file === 'ios/fixture/Info.plist')).toMatchObject({ kind: 'lines' });
     expect(result.changes.find((c) => c.step === 1 && c.file === 'ios/fixture/Info.plist')).toMatchObject({ overwrote: [0] });
+  });
+
+  it('compares against a git ref with --base', async () => {
+    const dir = variant('git', () => {});
+    const git = (...args: string[]) => spawnSync('git', ['-c', 'user.name=test', '-c', 'user.email=test@example.com', ...args], { cwd: dir, encoding: 'utf8' });
+    git('init', '-q');
+    writeFileSync(path.join(dir, '.gitignore'), 'node_modules\n');
+    git('add', '.');
+    git('commit', '-qm', 'base');
+    const appJson = JSON.parse(readFileSync(path.join(dir, 'app.json'), 'utf8'));
+    appJson.expo.plugins = appJson.expo.plugins.filter((p: unknown) => p !== './plugins/withDangerousPodfile.ts');
+    writeFileSync(path.join(dir, 'app.json'), JSON.stringify(appJson, null, 2));
+
+    const checkout = await checkoutBase(dir, 'HEAD');
+    try {
+      expect(checkout.deps).toBe('linked');
+      const before = await run(checkout.projectRoot, { platform: 'ios' });
+      const after = await run(dir, { platform: 'ios' });
+      const cmp = compare({ ...before, ref: 'HEAD', commit: checkout.commit }, after);
+      expect(cmp.files.map((f) => [f.file, f.added, f.removed])).toEqual([['ios/Podfile', 0, 2]]);
+      expect(cmp.plugins).toMatchObject([{ name: './plugins/withDangerousPodfile.ts', status: 'removed' }]);
+    } finally {
+      checkout.dispose();
+    }
+    expect(git('worktree', 'list').stdout.trim().split('\n')).toHaveLength(1);
   });
 });

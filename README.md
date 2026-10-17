@@ -65,14 +65,40 @@ Once it's published, it'll be `npx prebuild-blame` in your project.
 
 | Flag | What it does |
 | --- | --- |
+| `--base <git-ref>` | Compare the native output with a branch, tag or commit. See below. |
 | `--html [file]` | Write the HTML report (default `prebuild-blame.html`) |
 | `--platform ios\|android\|all` | Only prebuild one platform (default `all`) |
 | `--only a,b` | Only report these plugins. Earlier plugins still run. |
 | `--json <file>` | Write the full result, including per-line blame and patches. Use `-` for stdout. |
+| `--markdown <file>` | Write a Markdown summary, sized for a PR comment. Use `-` for stdout. |
 | `--concurrency <n>` | Prebuilds to run at once (default: CPU count) |
 | `--keep-temp` | Keep the temp copies so you can poke around |
 
 Works with `app.json` and with `app.config.ts`/`.js`, including inline function plugins. Requires Node 22.13+ (the same as Expo SDK 58) and your project's dependencies installed. It's tested on SDK 58 so far.
+
+### Comparing with a branch: `--base`
+
+`--base main` answers "what does this branch do to the native folders, and which plugin is responsible?" It checks `main` out into a temporary git worktree, blames both versions, and diffs the final output:
+
+```
+$ npx prebuild-blame --base main
+
+prebuild-blame · main (e3c1fda) → working tree · SDK 58 · 15 prebuilds in 6.8s
+  expo-camera                                  AndroidManifest.xml -1
+  expo-build-properties                        Podfile.properties.json +1 -1, project.pbxproj +2 -2
+  expo-location (auto)                         Info.plist +1 -1
+  ./plugins/withDangerousPodfile.ts (removed)  Podfile -2
+  · project.pbxproj is now touched by expo-build-properties, ./plugins/withXcodeResource.ts
+  5 generated files changed
+```
+
+Here the branch turned off `recordAudioAndroid`, bumped the iOS deployment target, dropped a plugin, and removed `expo-location` from `plugins`. That last one is a nice catch: Expo still applies it because the package is installed, but your custom permission text is gone.
+
+- Changed plugin options and changed plugin versions both show up under the plugin's name. **(new)** and **(removed)** mark plugins only one side has. **Expo defaults** is the template itself, which mostly changes on SDK upgrades.
+- Only overlaps that are new on your branch are flagged.
+- If `package.json` and the lockfile are unchanged, the base reuses your `node_modules`. Otherwise it installs the base's dependencies with your package manager (lifecycle scripts skipped), which takes longer.
+- In CI, the base ref has to be fetched. With `actions/checkout`, set `fetch-depth: 0`.
+- `--markdown pr.md` writes the same summary with collapsible diffs, ready to post as a PR comment.
 
 ## Status
 
@@ -82,7 +108,7 @@ Works with `app.json` and with `app.config.ts`/`.js`, including inline function 
 - [x] Overlap and conflict flags
 - [x] Colour-coded HTML report
 - [ ] Cache the baseline between runs
-- [ ] `--base <git-ref>` to compare native output between two commits
+- [x] `--base <git-ref>` to compare native output with another commit, plus `--markdown`
 - [ ] GitHub Action that posts the summary on PRs
 
 ## Not in scope
@@ -108,8 +134,11 @@ src/
   prebuild.ts            runs expo prebuild, in parallel
   snapshot.ts            reads android/ and ios/, normalizes pbxproj
   blame.ts               line-level attribution and overlaps
+  base.ts                checks out --base into a git worktree
+  compare.ts             what changed since --base, and whose it is
   report/terminal.ts     the terminal summary
   report/html.ts         the HTML report
+  report/markdown.ts     Markdown summaries for PR comments
   normalize/pbxproj.ts   stable Xcode object ids
   steps.ts               which plugins run at each step
   runtime/app-config.ts  loaded by Expo inside each temp copy

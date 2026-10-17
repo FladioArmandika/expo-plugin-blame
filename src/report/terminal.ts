@@ -1,6 +1,7 @@
 import path from 'node:path';
 import { styleText } from 'node:util';
 import type { FileChange } from '../blame.js';
+import type { Comparison, PluginDelta } from '../compare.js';
 import type { RunResult } from '../run.js';
 
 type Style = Parameters<typeof styleText>[0];
@@ -38,7 +39,7 @@ export function formatTerminal(result: RunResult, options: TerminalOptions = {})
     return parts.join(' ');
   };
 
-  const sdk = result.sdkVersion ? `SDK ${result.sdkVersion.split('.')[0]}` : 'Expo';
+  const sdk = sdkLabel(result.sdkVersion);
   const lines = [
     paint('bold', 'prebuild-blame') +
       paint('dim', ` · ${sdk} · ${result.steps.length} plugins · ${result.prebuilds} prebuilds in ${(result.durationMs / 1000).toFixed(1)}s${result.platform === 'all' ? '' : ` · ${result.platform} only`}`),
@@ -66,5 +67,55 @@ export function formatTerminal(result: RunResult, options: TerminalOptions = {})
     }
   }
 
+  return lines.join('\n');
+}
+
+const sdkLabel = (version: string | undefined) => (version ? `SDK ${version.split('.')[0]}` : 'Expo');
+
+export function formatComparison(cmp: Comparison, options: Pick<TerminalOptions, 'color'> = {}): string {
+  const paint = (style: Style, text: string) => (options.color ? styleText(style, text) : text);
+  const { base, head } = cmp;
+  const names = shortNames(cmp.files.map((f) => f.file));
+  const sdk = sdkLabel(base.sdkVersion) === sdkLabel(head.sdkVersion)
+    ? sdkLabel(head.sdkVersion)
+    : `${sdkLabel(base.sdkVersion)} → ${sdkLabel(head.sdkVersion).replace('SDK ', '')}`;
+  const seconds = ((base.durationMs + head.durationMs) / 1000).toFixed(1);
+  const lines = [
+    paint('bold', 'prebuild-blame') +
+      paint('dim', ` · ${base.ref} (${base.commit}) → working tree · ${sdk} · ${base.prebuilds + head.prebuilds} prebuilds in ${seconds}s${head.platform === 'all' ? '' : ` · ${head.platform} only`}`),
+  ];
+
+  const tag = (p: PluginDelta) =>
+    [p.auto ? 'auto' : '', p.status === 'added' ? 'new' : p.status === 'removed' ? 'removed' : ''].filter(Boolean).join(', ');
+  const labels = cmp.plugins.map((p) => p.name + (tag(p) ? ` (${tag(p)})` : ''));
+  const width = Math.max(0, ...labels.map((l) => l.length));
+  cmp.plugins.forEach((p, i) => {
+    const label = labels[i]!;
+    const painted = paint('cyan', p.name) + (tag(p) ? paint('dim', ` (${tag(p)})`) : '');
+    const summary = p.files.length
+      ? p.files
+          .map((f) => {
+            const parts = f.binary ? [paint('yellow', '(binary)')] : [];
+            if (f.added) parts.push(paint('green', `+${f.added}`));
+            if (f.removed) parts.push(paint('red', `-${f.removed}`));
+            return `${names.get(f.file)} ${parts.join(' ')}`;
+          })
+          .join(', ')
+      : paint('dim', 'no native changes');
+    lines.push(`  ${painted}${' '.repeat(width - label.length + 2)}${summary}`);
+  });
+
+  for (const o of cmp.newOverlaps) {
+    if (o.kind === 'lines') {
+      for (const c of o.clashes) {
+        lines.push(paint('yellow', `  ⚠ ${names.get(o.file) ?? path.posix.basename(o.file)}: ${c.plugin} now changes lines written by ${c.overwrote.join(', ')}`));
+      }
+    } else {
+      lines.push(paint('dim', `  · ${names.get(o.file) ?? path.posix.basename(o.file)} is now touched by ${o.plugins.join(', ')}`));
+    }
+  }
+
+  const n = cmp.files.length;
+  lines.push(n ? paint('dim', `  ${n} generated file${n === 1 ? '' : 's'} changed`) : '  No changes to the generated native files.');
   return lines.join('\n');
 }

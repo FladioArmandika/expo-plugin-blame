@@ -28,6 +28,8 @@ export interface FileChange {
 export interface FileBlame {
   file: string;
   binary: boolean;
+  /** Content hash of a binary file. */
+  hash?: string;
   /** Final content, one entry per line, with the step that last wrote it. */
   lines: { text: string; owner: number }[];
 }
@@ -46,7 +48,7 @@ export interface BlameResult {
   overlaps: Overlap[];
 }
 
-const splitLines = (text: string): string[] => {
+export const splitLines = (text: string): string[] => {
   if (text === '') return [];
   const lines = text.split('\n');
   if (lines.at(-1) === '') lines.pop();
@@ -126,7 +128,10 @@ export function blame(steps: Step[], snapshots: Snapshot[]): BlameResult {
 
   const files: FileBlame[] = [
     ...[...owners].map(([file, lines]) => ({ file, binary: false, lines })),
-    ...[...binaryOwner].map(([file, owner]) => ({ file, binary: true, lines: [{ text: '', owner }] })),
+    ...[...binaryOwner].map(([file, owner]) => {
+      const content = snapshots.at(-1)!.get(file);
+      return { file, binary: true, hash: content?.kind === 'binary' ? content.hash : undefined, lines: [{ text: '', owner }] };
+    }),
   ].sort((x, y) => x.file.localeCompare(y.file));
 
   return { steps, changes, files, overlaps: findOverlaps(changes) };
