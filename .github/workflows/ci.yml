@@ -30,3 +30,33 @@ jobs:
       - run: npm test
         env:
           PREBUILD_BLAME_REQUIRE_E2E: '1'
+
+  # Runs this repo's own GitHub Action on the test fixture. On pull requests it
+  # compares with the base branch and comments, the way users run it.
+  action:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            test/fixtures/basic/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: test/fixtures/basic
+      - id: blame
+        uses: ./
+        with:
+          working-directory: test/fixtures/basic
+          base: ${{ github.event_name == 'push' && 'HEAD~1' || '' }}
+      - name: Check the outputs
+        run: |
+          test "${{ steps.blame.outputs.changed }}" = true -o "${{ steps.blame.outputs.changed }}" = false
+          head -n 1 "${{ steps.blame.outputs.markdown-file }}" | grep -qx '<!-- prebuild-blame -->'

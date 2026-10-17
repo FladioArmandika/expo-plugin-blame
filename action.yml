@@ -1,0 +1,104 @@
+name: prebuild-blame
+description: Comment on pull requests with what changed in the generated android/ and ios/ folders, and which Expo config plugin did it.
+author: FladioArmandika
+branding:
+  icon: git-pull-request
+  color: blue
+
+inputs:
+  working-directory:
+    description: The Expo project folder, relative to the repository root.
+    default: .
+  base:
+    description: Git ref to compare with. Defaults to the pull request's base branch.
+    default: ''
+  platform:
+    description: ios, android or all.
+    default: all
+  comment:
+    description: Post the summary as a pull request comment, and keep it updated on later pushes.
+    default: 'true'
+  github-token:
+    description: Token used to post the comment. Needs pull-requests write permission.
+    default: ${{ github.token }}
+
+outputs:
+  changed:
+    description: '"true" if the generated native files differ from the base.'
+    value: ${{ steps.blame.outputs.changed }}
+  markdown-file:
+    description: Path to the Markdown summary.
+    value: ${{ steps.blame.outputs.markdown-file }}
+  json-file:
+    description: Path to the full comparison as JSON.
+    value: ${{ steps.blame.outputs.json-file }}
+
+runs:
+  using: composite
+  steps:
+    - name: Build prebuild-blame
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        if ! node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 13) ? 0 : 1)'; then
+          echo "::error::prebuild-blame needs Node 22.13 or later, like Expo SDK 58. Add actions/setup-node before this step."
+          exit 1
+        fi
+        npm ci --no-audit --no-fund --loglevel=error
+        npm run build --silent
+
+    - name: Compare native output
+      id: blame
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        INPUT_BASE: ${{ inputs.base }}
+        INPUT_PLATFORM: ${{ inputs.platform }}
+      run: |
+        base="$INPUT_BASE"
+        if [ -z "$base" ]; then
+          if [ -z "$GITHUB_BASE_REF" ]; then
+            echo "::error::Set the base input, or run this on pull_request events."
+            exit 1
+          fi
+          git fetch --quiet --depth=1 --no-tags origin "+refs/heads/$GITHUB_BASE_REF:refs/remotes/origin/$GITHUB_BASE_REF"
+          base="origin/$GITHUB_BASE_REF"
+        elif ! git rev-parse --verify --quiet "$base^{commit}" >/dev/null; then
+          # Shallow checkouts don't have other refs yet.
+          git fetch --quiet --depth=1 --no-tags origin "+refs/heads/$base:refs/remotes/origin/$base" && base="origin/$base"
+        fi
+
+        md="$RUNNER_TEMP/prebuild-blame.md"
+        json="$RUNNER_TEMP/prebuild-blame.json"
+        node "$GITHUB_ACTION_PATH/dist/cli.js" . --base "$base" --platform "$INPUT_PLATFORM" --markdown "$md" --json "$json"
+
+        changed=$(node -e 'process.stdout.write(String(require(process.argv[1]).files.length > 0))' "$json")
+        cat "$md" >> "$GITHUB_STEP_SUMMARY"
+        {
+          echo "changed=$changed"
+          echo "markdown-file=$md"
+          echo "json-file=$json"
+        } >> "$GITHUB_OUTPUT"
+
+    - name: Comment on the pull request
+      if: inputs.comment == 'true' && github.event.pull_request.number
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR: ${{ github.event.pull_request.number }}
+        CHANGED: ${{ steps.blame.outputs.changed }}
+        BODY: ${{ steps.blame.outputs.markdown-file }}
+      run: |
+        comments="repos/$GITHUB_REPOSITORY/issues/$PR/comments"
+        # The first line of the summary is a marker, so later runs update the same comment.
+        existing=$(gh api "$comments" --paginate --jq '.[] | select(.body | startswith("<!-- prebuild-blame -->")) | .id' | head -n 1) || existing=""
+        if [ -n "$existing" ]; then
+          result=$(gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -F "body=@$BODY" 2>&1) && echo "Updated the prebuild-blame comment." && exit 0
+        elif [ "$CHANGED" = "true" ]; then
+          result=$(gh api -X POST "$comments" -F "body=@$BODY" 2>&1) && echo "Posted the prebuild-blame comment." && exit 0
+        else
+          echo "No native changes, so no comment."
+          exit 0
+        fi
+        # Pull requests from forks get a read-only token. The job summary still has the report.
+        echo "::warning::Couldn't comment on the pull request (it may come from a fork, or the workflow lacks pull-requests: write). The summary is in the job summary instead. $result"

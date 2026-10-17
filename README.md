@@ -100,6 +100,43 @@ Here the branch turned off `recordAudioAndroid`, bumped the iOS deployment targe
 - In CI, the base ref has to be fetched. With `actions/checkout`, set `fetch-depth: 0`.
 - `--markdown pr.md` writes the same summary with collapsible diffs, ready to post as a PR comment.
 
+### On pull requests: the GitHub Action
+
+Add this workflow and every PR gets a comment showing what it does to `android/` and `ios/`, and which plugin did it. The comment is updated on each push, and nothing is posted while a PR has no native changes.
+
+```yaml
+# .github/workflows/prebuild-blame.yml
+name: prebuild-blame
+on: pull_request
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  prebuild-blame:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: FladioArmandika/prebuild-blame@main
+```
+
+It runs on Linux, since prebuild only generates files and nothing gets compiled. The report also lands in the job summary, which is where you'll find it for PRs from forks, because GitHub doesn't let those post comments.
+
+| Input | Default | What it does |
+| --- | --- | --- |
+| `working-directory` | `.` | The Expo project folder, for monorepos |
+| `base` | the PR's base branch | Any branch, tag or commit to compare with |
+| `platform` | `all` | `ios`, `android` or `all` |
+| `comment` | `true` | Set to `false` to only write the job summary |
+
+Outputs: `changed` (`true` or `false`), `markdown-file` and `json-file`. Use them to fail the job or post somewhere else.
+
 ## Status
 
 - [x] Stable `project.pbxproj` normalization
@@ -109,7 +146,7 @@ Here the branch turned off `recordAudioAndroid`, bumped the iOS deployment targe
 - [x] Colour-coded HTML report
 - [ ] Cache the baseline between runs
 - [x] `--base <git-ref>` to compare native output with another commit, plus `--markdown`
-- [ ] GitHub Action that posts the summary on PRs
+- [x] GitHub Action that posts the summary on PRs
 
 ## Not in scope
 
@@ -146,6 +183,7 @@ test/
   fixtures/basic/        small Expo app with real and local plugins
 examples/demo/           the app behind the output and GIF above
 scripts/record-gif.cjs   re-records docs/report.gif
+action.yml               the GitHub Action
 ```
 
 The end-to-end tests run real `expo prebuild`s on `test/fixtures/basic`. Run `npm install` in that folder first, or they're skipped. To try the demo, run `npm install` in `examples/demo`, then `node dist/cli.js examples/demo --html`.
