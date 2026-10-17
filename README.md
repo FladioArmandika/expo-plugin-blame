@@ -51,3 +51,13 @@ Planned flags: `--platform ios|android`, `--only <plugin>`, `--json`, `--concurr
 ## Not in scope
 
 It doesn't fix anything, run native builds, or support bare React Native without Expo prebuild. It just tells you who did what.
+
+## Development
+
+```sh
+npm install
+npm run build && npm test     # unit tests, plus real prebuilds if the fixture is installed
+npm run typecheck
+```
+
+The end-to-end test runs `expo prebuild` on [test/fixtures/basic](test/fixtures/basic). Run `npm install` in that folder first, or it's skipped.

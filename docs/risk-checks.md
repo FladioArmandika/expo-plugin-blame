@@ -2,7 +2,7 @@
 
 Tested on 2026-10-17 against a fresh `create-expo-app` (blank-typescript): **Expo SDK 58.0.14, React Native 0.88.0**.
 Fixture plugins: `expo-camera`, `expo-location`, `expo-build-properties`, a local dangerous mod that edits the Podfile, and a local `withXcodeProject` plugin that adds a resource file to the Xcode project.
-The prototype scripts are in [spike/](../spike/).
+The prototypes now live in TypeScript: [src/normalize/pbxproj.ts](../src/normalize/pbxproj.ts), [src/runtime/app-config.ts](../src/runtime/app-config.ts), and the fixture in [test/fixtures/basic](../test/fixtures/basic).
 
 ## 1. Competition: nothing does this yet
 
@@ -17,7 +17,7 @@ The prototype scripts are in [spike/](../spike/).
 
 - **Without Xcode-object plugins:** two prebuilds of the same project are byte-identical. That holds for all of `android/`, all of `ios/`, and even the `.pbxproj`.
 - **With Xcode-object plugins:** once a plugin adds Xcode objects (`addResourceFileToGroup`), every run gets new random UUIDs on 6 lines. Nothing else differs.
-- **Fix:** the [normalizer prototype](../spike/normalize-pbxproj.js) keeps UUIDs that already exist in the baseline (the template's ids are stable). It renames only new ones, to a hash of the object's content (iterated so references resolve, with an ordinal for exact duplicates).
+- **Fix:** the [normalizer](../src/normalize/pbxproj.ts) keeps UUIDs that already exist in the baseline (the template's ids are stable). It renames only new ones, to a hash of the object's content (iterated so references resolve, with an ordinal for exact duplicates).
 - **Result:** 7 runs were identical after normalization. A plugin's diff reads cleanly, e.g. `+4 lines: extra.json PBXBuildFile, PBXFileReference, group child, Resources entry`.
 - **Sorting:** sorting keys turned out to be unnecessary. Section order is deterministic for a given plugin order, so I'd skip it and keep the output close to what Xcode writes.
 - **Implementation:** it works on the raw text with a regex over `objects`, so nothing gets re-serialized. The `xcode` parser is only needed if the regex hits edge cases.

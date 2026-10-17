@@ -34,8 +34,8 @@
           }
         }
       ],
-      "./plugins/withDangerousPodfile.js",
-      "./plugins/withXcodeResource.js"
+      "./plugins/withDangerousPodfile.ts",
+      "./plugins/withXcodeResource.ts"
     ]
   }
 }
