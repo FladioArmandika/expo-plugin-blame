@@ -28,6 +28,7 @@
           }
         }
       ],
+      "./plugins/withDangerousPodfile.ts",
       "./plugins/withXcodeResource.ts"
     ]
   }
