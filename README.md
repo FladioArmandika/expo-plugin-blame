@@ -1,8 +1,10 @@
 # prebuild-blame
 
+[![CI](https://github.com/FladioArmandika/prebuild-blame/actions/workflows/ci.yml/badge.svg)](https://github.com/FladioArmandika/prebuild-blame/actions/workflows/ci.yml)
+
 **`git blame` for `expo prebuild`. See which config plugin wrote which lines in your `android/` and `ios/` folders.**
 
-![The HTML report: every line of the generated native files, coloured by the plugin that wrote it](docs/report.gif)
+![The HTML report: every line of the generated native files, coloured by the plugin that wrote it](https://raw.githubusercontent.com/FladioArmandika/prebuild-blame/main/docs/report.gif)
 
 > 🚧 **Work in progress.** It works and is tested against real prebuilds, but it isn't on npm yet.
 
@@ -70,7 +72,7 @@ Once it's published, it'll be `npx prebuild-blame` in your project.
 | `--concurrency <n>` | Prebuilds to run at once (default: CPU count) |
 | `--keep-temp` | Keep the temp copies so you can poke around |
 
-Works with `app.json` and with `app.config.ts`/`.js`, including inline function plugins. Requires Node 20.12+ and your project's dependencies installed. It's tested on SDK 58 so far.
+Works with `app.json` and with `app.config.ts`/`.js`, including inline function plugins. Requires Node 22.13+ (the same as Expo SDK 58) and your project's dependencies installed. It's tested on SDK 58 so far.
 
 ## Status
 

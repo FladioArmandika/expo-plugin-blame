@@ -12,6 +12,11 @@ const ready =
   existsSync(path.join(fixture, 'node_modules/expo')) &&
   existsSync(path.resolve(import.meta.dirname, '../dist/runtime/app-config.cjs'));
 
+// CI sets this so a broken fixture install fails the build instead of skipping silently.
+if (!ready && process.env.PREBUILD_BLAME_REQUIRE_E2E) {
+  throw new Error('End-to-end tests required but the fixture or build is missing');
+}
+
 const scratch = mkdtempSync(path.join(tmpdir(), 'prebuild-blame-test-'));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 

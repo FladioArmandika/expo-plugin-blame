@@ -41,7 +41,7 @@ export function formatTerminal(result: RunResult, options: TerminalOptions = {})
   const sdk = result.sdkVersion ? `SDK ${result.sdkVersion.split('.')[0]}` : 'Expo';
   const lines = [
     paint('bold', 'prebuild-blame') +
-      paint('dim', ` · ${sdk} · ${result.steps.length} plugins · ${result.prebuilds} prebuilds in ${(result.durationMs / 1000).toFixed(1)}s`),
+      paint('dim', ` · ${sdk} · ${result.steps.length} plugins · ${result.prebuilds} prebuilds in ${(result.durationMs / 1000).toFixed(1)}s${result.platform === 'all' ? '' : ` · ${result.platform} only`}`),
   ];
 
   for (const step of shown) {
