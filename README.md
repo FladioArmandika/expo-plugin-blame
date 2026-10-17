@@ -2,7 +2,7 @@
 
 **`git blame` for `expo prebuild`. See which config plugin wrote which lines in your `android/` and `ios/` folders.**
 
-> 🚧 **Work in progress.** The core approach works and is tested against real prebuilds. The CLI itself is being built now, and nothing is on npm yet.
+> 🚧 **Work in progress.** The CLI works and is tested against real prebuilds, but it isn't on npm yet and the HTML report is still to come.
 
 ## Why
 
@@ -18,42 +18,59 @@ Something weird shows up in your `AndroidManifest.xml` or `project.pbxproj` afte
 
 **The sneaky part:** Expo quietly auto-applies some plugins, like `expo-camera` and `expo-location`, whenever the package is installed. That means a naive "no plugins" baseline still contains them. prebuild-blame keeps them out of the baseline so their changes are blamed on the right name. The details are in [docs/risk-checks.md](docs/risk-checks.md).
 
-## What it'll look like
+## What it looks like
 
 ```
 $ npx prebuild-blame
 
-prebuild-blame · SDK 58 · 5 plugins · 6 prebuilds
-  expo-camera              Info.plist +4, AndroidManifest.xml +2
-  expo-location            Info.plist +13, AndroidManifest.xml +2
-  expo-build-properties    Podfile.properties.json +5 -1, gradle.properties +2 -1
-  ./withDangerousPodfile   Podfile +1
-  ./withXcodeResource      project.pbxproj +4, extra.json +1
-  ⚠ Info.plist touched by expo-camera, expo-location
-Report: prebuild-blame.html
+prebuild-blame · SDK 58 · 5 plugins · 6 prebuilds in 4.5s
+  expo-camera                        AndroidManifest.xml +2, Info.plist +4
+  expo-location                      AndroidManifest.xml +2, Info.plist +13
+  expo-build-properties              gradle.properties +1, Podfile.properties.json +5 -1
+  ./plugins/withDangerousPodfile.ts  Podfile +2
+  ./plugins/withXcodeResource.ts     project.pbxproj +4, extra.json +1 (new)
+  · AndroidManifest.xml touched by expo-camera, expo-location
+  · Info.plist touched by expo-camera, expo-location
 ```
 
-These numbers are real attribution from the test fixture on a fresh SDK 58 app, shown in the planned output format. The HTML report will show the full diff, colour-coded per plugin.
+That's the real output on the test fixture, a fresh SDK 58 app. Files touched by more than one plugin get a `·` note. When a plugin actually rewrites lines another plugin wrote, you get a warning instead:
+
+```
+  ⚠ Info.plist: withAnonymous changed lines written by expo-camera
+```
+
+Installed packages that Expo applies on its own, without being in your `plugins` list, show up as their own steps marked `(auto)`.
 
 ## Usage
 
-Once it's published:
+Not on npm yet, so for now run it from a clone:
 
 ```sh
-npx prebuild-blame            # run in your Expo project
-npx prebuild-blame --html     # also write the HTML report
+git clone https://github.com/FladioArmandika/prebuild-blame && cd prebuild-blame
+npm install && npm run build
+node dist/cli.js path/to/your/expo-app
 ```
 
-Planned flags: `--platform ios|android`, `--only <plugin>`, `--json`, `--concurrency <n>`, `--no-cache`, `--keep-temp`.
+Once it's published, it'll be `npx prebuild-blame` in your project.
 
-Requires Node 20+ and an Expo project that uses prebuild. It's tested on SDK 58 so far.
+| Flag | What it does |
+| --- | --- |
+| `--platform ios\|android\|all` | Only prebuild one platform (default `all`) |
+| `--only a,b` | Only report these plugins. Earlier plugins still run. |
+| `--json <file>` | Write the full result, including per-line blame and patches. Use `-` for stdout. |
+| `--concurrency <n>` | Prebuilds to run at once (default: CPU count) |
+| `--keep-temp` | Keep the temp copies so you can poke around |
+
+Works with `app.json` and with `app.config.ts`/`.js`, including inline function plugins. Requires Node 20.12+ and your project's dependencies installed. It's tested on SDK 58 so far.
 
 ## Status
 
 - [x] Stable `project.pbxproj` normalization
 - [x] Per-plugin steps that keep Expo's auto-applied plugins out of the baseline
-- [ ] CLI: temp workspace, parallel prebuilds, diffing, terminal summary
+- [x] CLI: temp workspace, parallel prebuilds, line-level blame, terminal summary, JSON output
+- [x] Overlap and conflict flags
 - [ ] Colour-coded HTML report
+- [ ] Cache the baseline between runs
 - [ ] `--base <git-ref>` to compare native output between two commits
 - [ ] GitHub Action that posts the summary on PRs
 
@@ -73,9 +90,17 @@ npm run typecheck
 
 ```
 src/
+  cli.ts                 flags and output
+  run.ts                 ties it together
+  expo.ts                reads the project with its own Expo install
+  workspace.ts           temp copies of the project
+  prebuild.ts            runs expo prebuild, in parallel
+  snapshot.ts            reads android/ and ios/, normalizes pbxproj
+  blame.ts               line-level attribution and overlaps
+  report/terminal.ts     the summary above
   normalize/pbxproj.ts   stable Xcode object ids
   steps.ts               which plugins run at each step
-  runtime/app-config.ts  loaded by Expo inside the temp copy
+  runtime/app-config.ts  loaded by Expo inside each temp copy
 test/
   fixtures/basic/        small Expo app with real and local plugins
 ```

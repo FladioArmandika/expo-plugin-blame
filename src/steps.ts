@@ -1,6 +1,16 @@
 /** Env var the generated app.config.js reads: how many user plugins to keep. */
 export const STEP_ENV = 'PREBUILD_BLAME_STEP';
 
+/** Written into the temp copy for the runtime to read. */
+export const WORKSPACE_FILE = 'prebuild-blame.json';
+
+export interface WorkspaceInfo {
+  /** The user's app.config.* after it was renamed, relative to the project root. */
+  userConfig: string | null;
+  /** Unlisted packages Expo would auto-apply, added as their own steps. */
+  autoPlugins: string[];
+}
+
 /** A plugin entry's name: the package or path, or a function plugin's name. */
 export function pluginName(entry: unknown): string | undefined {
   const plugin = Array.isArray(entry) ? entry[0] : entry;
