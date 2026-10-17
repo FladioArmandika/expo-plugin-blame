@@ -1,8 +1,8 @@
 /** Env var the generated app.config.js reads: how many user plugins to keep. */
-export const STEP_ENV = 'PREBUILD_BLAME_STEP';
+export const STEP_ENV = 'EXPO_PLUGIN_BLAME_STEP';
 
 /** Written into the temp copy for the runtime to read. */
-export const WORKSPACE_FILE = 'prebuild-blame.json';
+export const WORKSPACE_FILE = 'expo-plugin-blame.json';
 
 export interface WorkspaceInfo {
   /** The user's app.config.* after it was renamed, relative to the project root. */

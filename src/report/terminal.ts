@@ -42,7 +42,7 @@ export function formatTerminal(result: RunResult, options: TerminalOptions = {})
 
   const sdk = sdkLabel(result.sdkVersion);
   const lines = [
-    paint('bold', 'prebuild-blame') +
+    paint('bold', 'expo-plugin-blame') +
       paint('dim', ` · ${sdk} · ${result.steps.length} plugins · ${runStats(result.prebuilds, result.cached, result.durationMs)}${result.platform === 'all' ? '' : ` · ${result.platform} only`}`),
   ];
 
@@ -81,7 +81,7 @@ export function formatComparison(cmp: Comparison, options: Pick<TerminalOptions,
     ? sdkLabel(head.sdkVersion)
     : `${sdkLabel(base.sdkVersion)} → ${sdkLabel(head.sdkVersion).replace('SDK ', '')}`;
   const lines = [
-    paint('bold', 'prebuild-blame') +
+    paint('bold', 'expo-plugin-blame') +
       paint('dim', ` · ${base.ref} (${base.commit}) → working tree · ${sdk} · ${runStats(base.prebuilds + head.prebuilds, base.cached + head.cached, base.durationMs + head.durationMs)}${head.platform === 'all' ? '' : ` · ${head.platform} only`}`),
   ];
 

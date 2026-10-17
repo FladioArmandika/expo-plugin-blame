@@ -16,11 +16,11 @@ const ready =
   existsSync(path.resolve(import.meta.dirname, '../dist/runtime/app-config.cjs'));
 
 // CI sets this so a broken fixture install fails the build instead of skipping silently.
-if (!ready && process.env.PREBUILD_BLAME_REQUIRE_E2E) {
+if (!ready && process.env.EXPO_PLUGIN_BLAME_REQUIRE_E2E) {
   throw new Error('End-to-end tests required but the fixture or build is missing');
 }
 
-const scratch = mkdtempSync(path.join(tmpdir(), 'prebuild-blame-test-'));
+const scratch = mkdtempSync(path.join(tmpdir(), 'expo-plugin-blame-test-'));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 /** A copy of the fixture with its app.json edited and extra files added. */
@@ -43,7 +43,7 @@ const summary = (result: RunResult) =>
     ]),
   );
 
-describe.skipIf(!ready)('prebuild-blame on real prebuilds', { timeout: 180_000 }, () => {
+describe.skipIf(!ready)('expo-plugin-blame on real prebuilds', { timeout: 180_000 }, () => {
   it('attributes every change in the basic fixture to the right plugin', async () => {
     const result = await run(fixture);
     expect(result.sdkVersion).toMatch(/^58\./);

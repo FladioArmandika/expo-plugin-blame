@@ -26,7 +26,7 @@ export function renderHtml(result: RunResult): string {
 
   const body = `
 <header>
-  <h1>prebuild-blame <span class="muted">${esc(project)}</span></h1>
+  <h1>expo-plugin-blame <span class="muted">${esc(project)}</span></h1>
   <p class="muted">${sdk} · ${result.steps.length} plugins · ${runStats(result.prebuilds, result.cached, result.durationMs)} · ${esc(result.platform)}</p>
   <nav class="legend" aria-label="Plugins">${result.steps.map((s) => legendChip(s, result.changes)).join('')}</nav>
   ${overlaps(result, name)}
@@ -48,7 +48,7 @@ export function renderHtml(result: RunResult): string {
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>prebuild-blame · ${esc(project)}</title>
+<title>expo-plugin-blame · ${esc(project)}</title>
 <style>${css()}</style>
 </head>
 <body>${body}

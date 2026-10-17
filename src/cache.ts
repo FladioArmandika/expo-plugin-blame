@@ -193,4 +193,4 @@ export function openCache(dir: string): SnapshotCache {
 }
 
 /** Where the cache lives by default: node_modules/.cache, like other tools. */
-export const defaultCacheDir = (projectRoot: string) => path.join(projectRoot, 'node_modules', '.cache', 'prebuild-blame');
+export const defaultCacheDir = (projectRoot: string) => path.join(projectRoot, 'node_modules', '.cache', 'expo-plugin-blame');

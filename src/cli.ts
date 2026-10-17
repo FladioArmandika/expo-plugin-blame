@@ -15,7 +15,7 @@ const PLATFORMS: Platform[] = ['ios', 'android', 'all'];
 
 const main = defineCommand({
   meta: {
-    name: 'prebuild-blame',
+    name: 'expo-plugin-blame',
     description: 'Show which Expo config plugin wrote which lines in android/ and ios/.',
   },
   args: {
@@ -23,7 +23,7 @@ const main = defineCommand({
     platform: { type: 'string', description: 'ios, android or all', default: 'all' },
     only: { type: 'string', description: 'Comma-separated plugins to report (earlier plugins still run)' },
     base: { type: 'string', description: 'Compare the native output with this git ref (branch, tag or commit)' },
-    html: { type: 'string', description: 'Write the colour-coded HTML report (default file: prebuild-blame.html)' },
+    html: { type: 'string', description: 'Write the colour-coded HTML report (default file: expo-plugin-blame.html)' },
     json: { type: 'string', description: 'Write the full result as JSON to this file (- for stdout)' },
     markdown: { type: 'string', description: 'Write a Markdown summary, e.g. for a PR comment (- for stdout)' },
     concurrency: { type: 'string', description: 'Prebuilds to run at once (default: CPU count)' },
@@ -74,7 +74,7 @@ async function blameCommand(args: Args) {
   const quiet = args.json === '-' || args.markdown === '-';
   const only = args.only?.split(',').map((s) => s.trim()).filter(Boolean);
   // `--html` with no value writes to the default file name.
-  const htmlFile = args.html === true || args.html === '' ? 'prebuild-blame.html' : args.html || undefined;
+  const htmlFile = args.html === true || args.html === '' ? 'expo-plugin-blame.html' : args.html || undefined;
   const options = (label: string): RunOptions => ({
     platform,
     concurrency,

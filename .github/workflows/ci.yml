@@ -29,7 +29,7 @@ jobs:
         working-directory: test/fixtures/basic
       - run: npm test
         env:
-          PREBUILD_BLAME_REQUIRE_E2E: '1'
+          EXPO_PLUGIN_BLAME_REQUIRE_E2E: '1'
 
   # Runs this repo's own GitHub Action on the test fixture. On pull requests it
   # compares with the base branch and comments, the way users run it.
@@ -59,4 +59,4 @@ jobs:
       - name: Check the outputs
         run: |
           test "${{ steps.blame.outputs.changed }}" = true -o "${{ steps.blame.outputs.changed }}" = false
-          head -n 1 "${{ steps.blame.outputs.markdown-file }}" | grep -qx '<!-- prebuild-blame -->'
+          head -n 1 "${{ steps.blame.outputs.markdown-file }}" | grep -qx '<!-- expo-plugin-blame -->'

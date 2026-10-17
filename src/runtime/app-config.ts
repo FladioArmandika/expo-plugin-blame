@@ -27,7 +27,7 @@ function appConfig(context: ConfigContext): ExpoConfig {
     c._internal ??= {};
     c._internal.pluginHistory ??= {};
     for (const name of suppressed) {
-      c._internal.pluginHistory[name] ??= { name, version: 'suppressed-by-prebuild-blame' };
+      c._internal.pluginHistory[name] ??= { name, version: 'suppressed-by-expo-plugin-blame' };
     }
     return c;
   };

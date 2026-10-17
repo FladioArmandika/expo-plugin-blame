@@ -4,7 +4,7 @@ import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { openCache, stepKeys } from '../src/cache.js';
 
-const scratch = mkdtempSync(path.join(tmpdir(), 'prebuild-blame-cache-'));
+const scratch = mkdtempSync(path.join(tmpdir(), 'expo-plugin-blame-cache-'));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 let n = 0;

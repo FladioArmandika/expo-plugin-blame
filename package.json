@@ -1,5 +1,5 @@
 {
-  "name": "prebuild-blame",
+  "name": "expo-plugin-blame",
   "version": "0.2.0",
   "description": "git blame for expo prebuild: see which config plugin wrote which lines in android/ and ios/",
   "keywords": [
@@ -7,21 +7,23 @@
     "prebuild",
     "config-plugins",
     "react-native",
-    "cng"
+    "cng",
+    "config-plugin",
+    "blame"
   ],
-  "homepage": "https://github.com/FladioArmandika/prebuild-blame#readme",
+  "homepage": "https://github.com/FladioArmandika/expo-plugin-blame#readme",
   "bugs": {
-    "url": "https://github.com/FladioArmandika/prebuild-blame/issues"
+    "url": "https://github.com/FladioArmandika/expo-plugin-blame/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/FladioArmandika/prebuild-blame.git"
+    "url": "git+https://github.com/FladioArmandika/expo-plugin-blame.git"
   },
   "license": "MIT",
   "author": "FladioArmandika",
   "type": "module",
   "bin": {
-    "prebuild-blame": "./dist/cli.js"
+    "expo-plugin-blame": "./dist/cli.js"
   },
   "files": [
     "dist"

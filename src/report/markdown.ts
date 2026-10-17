@@ -3,7 +3,7 @@ import type { RunResult } from '../run.js';
 import { runStats } from './stats.js';
 
 /** Lets a bot find and update its earlier comment instead of posting a new one. */
-export const MARKER = '<!-- prebuild-blame -->';
+export const MARKER = '<!-- expo-plugin-blame -->';
 
 // GitHub rejects comments over 65,536 characters; leave room for the rest.
 const DIFF_BUDGET = 50_000;
@@ -36,17 +36,17 @@ function diffs(files: { file: string; patch: string; binary: boolean }[]): strin
     used += block.length;
     out.push(block);
   }
-  if (skipped) out.push(`_${skipped} more diff${skipped === 1 ? '' : 's'} left out to fit in a comment. Run prebuild-blame locally to see everything._`);
+  if (skipped) out.push(`_${skipped} more diff${skipped === 1 ? '' : 's'} left out to fit in a comment. Run expo-plugin-blame locally to see everything._`);
   return out;
 }
 
 const footer = (prebuilds: number, cached: number, ms: number, sdk: string | undefined) =>
-  `<sub>${sdk ? `SDK ${sdk.split('.')[0]} · ` : ''}${runStats(prebuilds, cached, ms)} · [prebuild-blame](https://github.com/FladioArmandika/prebuild-blame)</sub>`;
+  `<sub>${sdk ? `SDK ${sdk.split('.')[0]} · ` : ''}${runStats(prebuilds, cached, ms)} · [expo-plugin-blame](https://github.com/FladioArmandika/expo-plugin-blame)</sub>`;
 
 /** A PR-comment-sized summary of how the native output changed since the base. */
 export function formatComparisonMarkdown(cmp: Comparison): string {
   const { base, head } = cmp;
-  const lines = [MARKER, `### prebuild-blame: native changes since ${code(base.ref)}`, ''];
+  const lines = [MARKER, `### expo-plugin-blame: native changes since ${code(base.ref)}`, ''];
 
   if (!cmp.files.length) {
     lines.push(`No changes to the generated \`android/\` and \`ios/\` files since ${code(base.ref)} (${base.commit}).`);
@@ -79,7 +79,7 @@ export function formatComparisonMarkdown(cmp: Comparison): string {
 /** The plain blame summary as Markdown. */
 export function formatMarkdown(result: RunResult): string {
   const name = (i: number) => result.steps[i]?.name ?? `step ${i + 1}`;
-  const lines = [MARKER, '### prebuild-blame', '', '| Plugin | Changes |', '| --- | --- |'];
+  const lines = [MARKER, '### expo-plugin-blame', '', '| Plugin | Changes |', '| --- | --- |'];
   for (const step of result.steps) {
     const changes = result.changes.filter((c) => c.step === step.index);
     const summary = changes.length ? changes.map((c) => `${code(c.file.split('/').pop()!)} ${counts(c)}`).join(', ') : 'no native changes';

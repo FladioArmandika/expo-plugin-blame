@@ -57,7 +57,7 @@ export async function checkoutBase(
     throw new Error(`Couldn't find ${ref} in this repository. In CI, fetch it first (for actions/checkout, set fetch-depth: 0).`);
   }
 
-  const tmp = mkdtempSync(path.join(tmpdir(), 'prebuild-blame-base-'));
+  const tmp = mkdtempSync(path.join(tmpdir(), 'expo-plugin-blame-base-'));
   const checkout = path.join(tmp, 'repo');
   git(repoRoot, ['worktree', 'add', '--detach', '--quiet', checkout, commit]);
   const dispose = () => {

@@ -1,10 +1,10 @@
-# prebuild-blame
+# expo-plugin-blame
 
-[![npm](https://img.shields.io/npm/v/prebuild-blame)](https://www.npmjs.com/package/prebuild-blame) [![CI](https://github.com/FladioArmandika/prebuild-blame/actions/workflows/ci.yml/badge.svg)](https://github.com/FladioArmandika/prebuild-blame/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/expo-plugin-blame)](https://www.npmjs.com/package/expo-plugin-blame) [![CI](https://github.com/FladioArmandika/expo-plugin-blame/actions/workflows/ci.yml/badge.svg)](https://github.com/FladioArmandika/expo-plugin-blame/actions/workflows/ci.yml)
 
 **`git blame` for `expo prebuild`. See which config plugin wrote which lines in your `android/` and `ios/` folders.**
 
-![The HTML report: every line of the generated native files, coloured by the plugin that wrote it](https://raw.githubusercontent.com/FladioArmandika/prebuild-blame/main/docs/report.gif)
+![The HTML report: every line of the generated native files, coloured by the plugin that wrote it](https://raw.githubusercontent.com/FladioArmandika/expo-plugin-blame/main/docs/report.gif)
 
 ## Why
 
@@ -18,16 +18,16 @@ Something weird shows up in your `AndroidManifest.xml` or `project.pbxproj` afte
 4. Normalizes `project.pbxproj` first, so random Xcode UUIDs don't show up as fake changes.
 5. Flags files touched by more than one plugin, which is where plugins tend to step on each other.
 
-**The sneaky part:** Expo quietly auto-applies some plugins, like `expo-camera` and `expo-location`, whenever the package is installed. That means a naive "no plugins" baseline still contains them. prebuild-blame keeps them out of the baseline so their changes are blamed on the right name. The details are in [docs/risk-checks.md](docs/risk-checks.md).
+**The sneaky part:** Expo quietly auto-applies some plugins, like `expo-camera` and `expo-location`, whenever the package is installed. That means a naive "no plugins" baseline still contains them. expo-plugin-blame keeps them out of the baseline so their changes are blamed on the right name. The details are in [docs/risk-checks.md](docs/risk-checks.md).
 
 ## What it looks like
 
 This is the real output on [examples/demo](examples/demo), a fresh SDK 58 app with a few plugins:
 
 ```
-$ npx prebuild-blame --html
+$ npx expo-plugin-blame --html
 
-prebuild-blame · SDK 58 · 7 plugins · 8 prebuilds in 4.2s
+expo-plugin-blame · SDK 58 · 7 plugins · 8 prebuilds in 4.2s
   expo-camera                        AndroidManifest.xml +2, Info.plist +4
   expo-location                      AndroidManifest.xml +2, Info.plist +13
   expo-build-properties              gradle.properties +1, Podfile.properties.json +5 -1
@@ -37,7 +37,7 @@ prebuild-blame · SDK 58 · 7 plugins · 8 prebuilds in 4.2s
   ./plugins/withXcodeResource.ts     project.pbxproj +4, extra.json +1 (new)
   ⚠ Info.plist: ./plugins/withCameraCopy.ts changed lines written by expo-camera
   · AndroidManifest.xml touched by expo-camera, expo-location
-Report: prebuild-blame.html
+Report: expo-plugin-blame.html
 ```
 
 The HTML report (the GIF above) is a single file you can open anywhere. **By file** shows every generated file with each line coloured by the plugin that wrote it. **By plugin** shows each plugin's diff. Click a plugin to highlight its lines.
@@ -54,16 +54,16 @@ The HTML report (the GIF above) is a single file you can open anywhere. **By fil
 Run it in your Expo project, with dependencies installed:
 
 ```sh
-npx prebuild-blame          # summary in the terminal
-npx prebuild-blame --html   # plus the colour-coded report
+npx expo-plugin-blame          # summary in the terminal
+npx expo-plugin-blame --html   # plus the colour-coded report
 ```
 
-Nothing to set up, and your `android/` and `ios/` folders are never touched.
+Nothing to set up, and your `android/` and `ios/` folders are never touched. (It was called `prebuild-blame` up to 0.1.0.)
 
 | Flag | What it does |
 | --- | --- |
 | `--base <git-ref>` | Compare the native output with a branch, tag or commit. See below. |
-| `--html [file]` | Write the HTML report (default `prebuild-blame.html`) |
+| `--html [file]` | Write the HTML report (default `expo-plugin-blame.html`) |
 | `--platform ios\|android\|all` | Only prebuild one platform (default `all`) |
 | `--only a,b` | Only report these plugins. Earlier plugins still run. |
 | `--json <file>` | Write the full result, including per-line blame and patches. Use `-` for stdout. |
@@ -76,7 +76,7 @@ Works with `app.json` and with `app.config.ts`/`.js`, including inline function 
 
 ### Caching
 
-Each prebuild's output is cached in `node_modules/.cache/prebuild-blame`, so a second run with nothing changed takes about half a second. Editing one plugin only re-runs the steps from that plugin onwards: tweak your last local plugin and it's one prebuild instead of eight. With `--base`, the base side is usually all cached too.
+Each prebuild's output is cached in `node_modules/.cache/expo-plugin-blame`, so a second run with nothing changed takes about half a second. Editing one plugin only re-runs the steps from that plugin onwards: tweak your last local plugin and it's one prebuild instead of eight. With `--base`, the base side is usually all cached too.
 
 The key covers your project files, the installed dependencies, the plugin options and this tool's own version. Anything else that changes the output gets missed, like a plugin reading an environment variable, or a local plugin importing another plugin file. Use `--no-cache` when you suspect it. Entries unused for two weeks are cleaned up.
 
@@ -85,9 +85,9 @@ The key covers your project files, the installed dependencies, the plugin option
 `--base main` answers "what does this branch do to the native folders, and which plugin is responsible?" It checks `main` out into a temporary git worktree, blames both versions, and diffs the final output:
 
 ```
-$ npx prebuild-blame --base main
+$ npx expo-plugin-blame --base main
 
-prebuild-blame · main (e3c1fda) → working tree · SDK 58 · 15 prebuilds in 6.8s
+expo-plugin-blame · main (e3c1fda) → working tree · SDK 58 · 15 prebuilds in 6.8s
   expo-camera                                  AndroidManifest.xml -1
   expo-build-properties                        Podfile.properties.json +1 -1, project.pbxproj +2 -2
   expo-location (auto)                         Info.plist +1 -1
@@ -109,8 +109,8 @@ Here the branch turned off `recordAudioAndroid`, bumped the iOS deployment targe
 Add this workflow and every PR gets a comment showing what it does to `android/` and `ios/`, and which plugin did it. The comment is updated on each push, and nothing is posted while a PR has no native changes.
 
 ```yaml
-# .github/workflows/prebuild-blame.yml
-name: prebuild-blame
+# .github/workflows/expo-plugin-blame.yml
+name: expo-plugin-blame
 on: pull_request
 
 permissions:
@@ -118,7 +118,7 @@ permissions:
   pull-requests: write
 
 jobs:
-  prebuild-blame:
+  expo-plugin-blame:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -127,7 +127,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
-      - uses: FladioArmandika/prebuild-blame@main
+      - uses: FladioArmandika/expo-plugin-blame@main
 ```
 
 It runs on Linux, since prebuild only generates files and nothing gets compiled. The report also lands in the job summary, which is where you'll find it for PRs from forks, because GitHub doesn't let those post comments.

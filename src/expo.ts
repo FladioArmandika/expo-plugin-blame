@@ -23,7 +23,7 @@ type GetConfig = (
   options: { skipSDKVersionRequirement: boolean; isPublicConfig: boolean },
 ) => { exp: { sdkVersion?: string; plugins?: unknown[] }; dynamicConfigPath: string | null };
 
-/** Reads what prebuild-blame needs using the project's own Expo install. */
+/** Reads what expo-plugin-blame needs using the project's own Expo install. */
 export function loadExpoProject(root: string): ExpoProject {
   const projectRequire = createRequire(path.join(root, 'package.json'));
   let expoPkg: string;

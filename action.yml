@@ -1,4 +1,4 @@
-name: prebuild-blame
+name: expo-plugin-blame
 description: Comment on pull requests with what changed in the generated android/ and ios/ folders, and which Expo config plugin did it.
 author: FladioArmandika
 branding:
@@ -36,12 +36,12 @@ outputs:
 runs:
   using: composite
   steps:
-    - name: Build prebuild-blame
+    - name: Build expo-plugin-blame
       shell: bash
       working-directory: ${{ github.action_path }}
       run: |
         if ! node -e 'const [a, b] = process.versions.node.split(".").map(Number); process.exit(a > 22 || (a === 22 && b >= 13) ? 0 : 1)'; then
-          echo "::error::prebuild-blame needs Node 22.13 or later, like Expo SDK 58. Add actions/setup-node before this step."
+          echo "::error::expo-plugin-blame needs Node 22.13 or later, like Expo SDK 58. Add actions/setup-node before this step."
           exit 1
         fi
         npm ci --no-audit --no-fund --loglevel=error
@@ -52,9 +52,9 @@ runs:
     - name: Restore the prebuild cache
       uses: actions/cache@v4
       with:
-        path: ${{ inputs.working-directory }}/node_modules/.cache/prebuild-blame
-        key: prebuild-blame-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
-        restore-keys: prebuild-blame-${{ runner.os }}-
+        path: ${{ inputs.working-directory }}/node_modules/.cache/expo-plugin-blame
+        key: expo-plugin-blame-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: expo-plugin-blame-${{ runner.os }}-
 
     - name: Compare native output
       id: blame
@@ -77,8 +77,8 @@ runs:
           git fetch --quiet --depth=1 --no-tags origin "+refs/heads/$base:refs/remotes/origin/$base" && base="origin/$base"
         fi
 
-        md="$RUNNER_TEMP/prebuild-blame.md"
-        json="$RUNNER_TEMP/prebuild-blame.json"
+        md="$RUNNER_TEMP/expo-plugin-blame.md"
+        json="$RUNNER_TEMP/expo-plugin-blame.json"
         node "$GITHUB_ACTION_PATH/dist/cli.js" . --base "$base" --platform "$INPUT_PLATFORM" --markdown "$md" --json "$json"
 
         changed=$(node -e 'process.stdout.write(String(require(process.argv[1]).files.length > 0))' "$json")
@@ -100,11 +100,11 @@ runs:
       run: |
         comments="repos/$GITHUB_REPOSITORY/issues/$PR/comments"
         # The first line of the summary is a marker, so later runs update the same comment.
-        existing=$(gh api "$comments" --paginate --jq '.[] | select(.body | startswith("<!-- prebuild-blame -->")) | .id' | head -n 1) || existing=""
+        existing=$(gh api "$comments" --paginate --jq '.[] | select(.body | startswith("<!-- expo-plugin-blame -->")) | .id' | head -n 1) || existing=""
         if [ -n "$existing" ]; then
-          result=$(gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -F "body=@$BODY" 2>&1) && echo "Updated the prebuild-blame comment." && exit 0
+          result=$(gh api -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$existing" -F "body=@$BODY" 2>&1) && echo "Updated the expo-plugin-blame comment." && exit 0
         elif [ "$CHANGED" = "true" ]; then
-          result=$(gh api -X POST "$comments" -F "body=@$BODY" 2>&1) && echo "Posted the prebuild-blame comment." && exit 0
+          result=$(gh api -X POST "$comments" -F "body=@$BODY" 2>&1) && echo "Posted the expo-plugin-blame comment." && exit 0
         else
           echo "No native changes, so no comment."
           exit 0

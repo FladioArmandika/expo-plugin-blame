@@ -1,5 +1,5 @@
 {
-  "name": "prebuild-blame-demo",
+  "name": "expo-plugin-blame-demo",
   "private": true,
   "main": "index.ts",
   "dependencies": {

@@ -1,4 +1,4 @@
-# prebuild-blame: risk checks and proposal
+# expo-plugin-blame: risk checks and proposal
 
 Tested on 2026-10-17 against a fresh `create-expo-app` (blank-typescript): **Expo SDK 58.0.14, React Native 0.88.0**.
 Fixture plugins: `expo-camera`, `expo-location`, `expo-build-properties`, a local dangerous mod that edits the Podfile, and a local `withXcodeProject` plugin that adds a resource file to the Xcode project.
@@ -56,7 +56,7 @@ Each line landed on the right plugin, including the dangerous mod and the `.pbxp
 ## Proposed repo structure
 
 ```
-prebuild-blame/
+expo-plugin-blame/
   src/
     cli.ts            # citty entry
     workspace.ts      # temp copy, node_modules symlink, wrapper app.config.js
@@ -81,9 +81,9 @@ Stack as you suggested, with one change: **citty** instead of commander (smaller
 ## Proposed CLI
 
 ```
-npx prebuild-blame [project-dir]          # default: cwd
+npx expo-plugin-blame [project-dir]          # default: cwd
   --platform ios|android|all              # default all
-  --html [file]                           # write report (default prebuild-blame.html)
+  --html [file]                           # write report (default expo-plugin-blame.html)
   --json [file]                           # machine-readable result (used by the Action)
   --only <plugin,...>                     # still runs earlier plugins, reports just these
   --concurrency <n>                       # default: CPU count
@@ -95,9 +95,9 @@ npx prebuild-blame [project-dir]          # default: cwd
 Terminal output:
 
 ```
-prebuild-blame · SDK 58 · 5 plugins · 6 prebuilds in 4.1s
+expo-plugin-blame · SDK 58 · 5 plugins · 6 prebuilds in 4.1s
   expo-camera            +4 Info.plist  +2 AndroidManifest.xml
   expo-location          +13 Info.plist +2 AndroidManifest.xml
   ⚠ Info.plist touched by expo-camera, expo-location (different keys)
-Report: prebuild-blame.html
+Report: expo-plugin-blame.html
 ```
