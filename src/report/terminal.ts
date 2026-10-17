@@ -3,6 +3,7 @@ import { styleText } from 'node:util';
 import type { FileChange } from '../blame.js';
 import type { Comparison, PluginDelta } from '../compare.js';
 import type { RunResult } from '../run.js';
+import { runStats } from './stats.js';
 
 type Style = Parameters<typeof styleText>[0];
 
@@ -42,7 +43,7 @@ export function formatTerminal(result: RunResult, options: TerminalOptions = {})
   const sdk = sdkLabel(result.sdkVersion);
   const lines = [
     paint('bold', 'prebuild-blame') +
-      paint('dim', ` · ${sdk} · ${result.steps.length} plugins · ${result.prebuilds} prebuilds in ${(result.durationMs / 1000).toFixed(1)}s${result.platform === 'all' ? '' : ` · ${result.platform} only`}`),
+      paint('dim', ` · ${sdk} · ${result.steps.length} plugins · ${runStats(result.prebuilds, result.cached, result.durationMs)}${result.platform === 'all' ? '' : ` · ${result.platform} only`}`),
   ];
 
   for (const step of shown) {
@@ -79,10 +80,9 @@ export function formatComparison(cmp: Comparison, options: Pick<TerminalOptions,
   const sdk = sdkLabel(base.sdkVersion) === sdkLabel(head.sdkVersion)
     ? sdkLabel(head.sdkVersion)
     : `${sdkLabel(base.sdkVersion)} → ${sdkLabel(head.sdkVersion).replace('SDK ', '')}`;
-  const seconds = ((base.durationMs + head.durationMs) / 1000).toFixed(1);
   const lines = [
     paint('bold', 'prebuild-blame') +
-      paint('dim', ` · ${base.ref} (${base.commit}) → working tree · ${sdk} · ${base.prebuilds + head.prebuilds} prebuilds in ${seconds}s${head.platform === 'all' ? '' : ` · ${head.platform} only`}`),
+      paint('dim', ` · ${base.ref} (${base.commit}) → working tree · ${sdk} · ${runStats(base.prebuilds + head.prebuilds, base.cached + head.cached, base.durationMs + head.durationMs)}${head.platform === 'all' ? '' : ` · ${head.platform} only`}`),
   ];
 
   const tag = (p: PluginDelta) =>

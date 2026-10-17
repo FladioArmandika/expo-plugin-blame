@@ -8,6 +8,8 @@ export interface ExpoProject {
   sdkVersion: string | undefined;
   /** Plugins from the app config, in declared order. */
   plugins: string[];
+  /** The same plugins as written in the config, with their options. */
+  pluginEntries: unknown[];
   /** Installed packages Expo applies on its own even though they aren't listed. */
   autoPlugins: string[];
   /** The project's own app.config.{ts,js,...}, if it has one. */
@@ -44,6 +46,7 @@ export function loadExpoProject(root: string): ExpoProject {
     root,
     sdkVersion: exp.sdkVersion,
     plugins,
+    pluginEntries: exp.plugins ?? [],
     autoPlugins,
     dynamicConfigPath: dynamicConfigPath ?? undefined,
     expoCli: path.join(path.dirname(expoPkg), 'bin/cli'),

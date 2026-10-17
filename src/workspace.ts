@@ -29,6 +29,8 @@ function findRuntime(): string {
 
 export interface Workspace {
   root: string;
+  /** The prepared copy that each step is cloned from. */
+  template: string;
   /** A fresh copy of the project for one step. */
   stepDir(step: number): string;
   dispose(): void;
@@ -59,6 +61,7 @@ export function createWorkspace(project: ExpoProject): Workspace {
 
   return {
     root,
+    template,
     stepDir(step) {
       const dir = path.join(root, `step-${step}`);
       mkdirSync(dir);

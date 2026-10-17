@@ -2,7 +2,9 @@ import { writeFileSync } from 'node:fs';
 import { styleText } from 'node:util';
 import { defineCommand, runMain } from 'citty';
 import type { Platform } from './prebuild.js';
+import path from 'node:path';
 import { checkoutBase } from './base.js';
+import { defaultCacheDir } from './cache.js';
 import { compare } from './compare.js';
 import { renderHtml } from './report/html.js';
 import { formatComparisonMarkdown, formatMarkdown } from './report/markdown.js';
@@ -25,6 +27,7 @@ const main = defineCommand({
     json: { type: 'string', description: 'Write the full result as JSON to this file (- for stdout)' },
     markdown: { type: 'string', description: 'Write a Markdown summary, e.g. for a PR comment (- for stdout)' },
     concurrency: { type: 'string', description: 'Prebuilds to run at once (default: CPU count)' },
+    cache: { type: 'boolean', description: 'Reuse prebuilds from earlier runs (--no-cache to run them all)', default: true },
     'keep-temp': { type: 'boolean', description: 'Keep the temp copies for inspection', default: false },
   },
   async run({ args }) {
@@ -48,6 +51,7 @@ type Args = {
   json?: string;
   markdown?: string;
   concurrency?: string;
+  cache: boolean;
   'keep-temp': boolean;
 };
 
@@ -75,6 +79,8 @@ async function blameCommand(args: Args) {
     platform,
     concurrency,
     keepTemp: args['keep-temp'],
+    // Base and head share one cache: keys are content hashes, so that's safe.
+    cacheDir: args.cache ? defaultCacheDir(path.resolve(args.dir)) : undefined,
     onProgress: (done, total) => status(`Running prebuild ${done}/${total}${label}…`),
   });
 

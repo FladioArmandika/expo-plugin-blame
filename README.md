@@ -1,12 +1,10 @@
 # prebuild-blame
 
-[![CI](https://github.com/FladioArmandika/prebuild-blame/actions/workflows/ci.yml/badge.svg)](https://github.com/FladioArmandika/prebuild-blame/actions/workflows/ci.yml)
+[![npm](https://img.shields.io/npm/v/prebuild-blame)](https://www.npmjs.com/package/prebuild-blame) [![CI](https://github.com/FladioArmandika/prebuild-blame/actions/workflows/ci.yml/badge.svg)](https://github.com/FladioArmandika/prebuild-blame/actions/workflows/ci.yml)
 
 **`git blame` for `expo prebuild`. See which config plugin wrote which lines in your `android/` and `ios/` folders.**
 
 ![The HTML report: every line of the generated native files, coloured by the plugin that wrote it](https://raw.githubusercontent.com/FladioArmandika/prebuild-blame/main/docs/report.gif)
-
-> 🚧 **Work in progress.** It works and is tested against real prebuilds, but it isn't on npm yet.
 
 ## Why
 
@@ -53,15 +51,14 @@ The HTML report (the GIF above) is a single file you can open anywhere. **By fil
 
 ## Usage
 
-Not on npm yet, so for now run it from a clone:
+Run it in your Expo project, with dependencies installed:
 
 ```sh
-git clone https://github.com/FladioArmandika/prebuild-blame && cd prebuild-blame
-npm install && npm run build
-node dist/cli.js path/to/your/expo-app
+npx prebuild-blame          # summary in the terminal
+npx prebuild-blame --html   # plus the colour-coded report
 ```
 
-Once it's published, it'll be `npx prebuild-blame` in your project.
+Nothing to set up, and your `android/` and `ios/` folders are never touched.
 
 | Flag | What it does |
 | --- | --- |
@@ -72,9 +69,16 @@ Once it's published, it'll be `npx prebuild-blame` in your project.
 | `--json <file>` | Write the full result, including per-line blame and patches. Use `-` for stdout. |
 | `--markdown <file>` | Write a Markdown summary, sized for a PR comment. Use `-` for stdout. |
 | `--concurrency <n>` | Prebuilds to run at once (default: CPU count) |
+| `--no-cache` | Run every prebuild, even ones cached from an earlier run |
 | `--keep-temp` | Keep the temp copies so you can poke around |
 
 Works with `app.json` and with `app.config.ts`/`.js`, including inline function plugins. Requires Node 22.13+ (the same as Expo SDK 58) and your project's dependencies installed. It's tested on SDK 58 so far.
+
+### Caching
+
+Each prebuild's output is cached in `node_modules/.cache/prebuild-blame`, so a second run with nothing changed takes about half a second. Editing one plugin only re-runs the steps from that plugin onwards: tweak your last local plugin and it's one prebuild instead of eight. With `--base`, the base side is usually all cached too.
+
+The key covers your project files, the installed dependencies, the plugin options and this tool's own version. Anything else that changes the output gets missed, like a plugin reading an environment variable, or a local plugin importing another plugin file. Use `--no-cache` when you suspect it. Entries unused for two weeks are cleaned up.
 
 ### Comparing with a branch: `--base`
 
@@ -144,7 +148,7 @@ Outputs: `changed` (`true` or `false`), `markdown-file` and `json-file`. Use the
 - [x] CLI: temp workspace, parallel prebuilds, line-level blame, terminal summary, JSON output
 - [x] Overlap and conflict flags
 - [x] Colour-coded HTML report
-- [ ] Cache the baseline between runs
+- [x] Cache each step's prebuild between runs
 - [x] `--base <git-ref>` to compare native output with another commit, plus `--markdown`
 - [x] GitHub Action that posts the summary on PRs
 
@@ -172,6 +176,7 @@ src/
   snapshot.ts            reads android/ and ios/, normalizes pbxproj
   blame.ts               line-level attribution and overlaps
   base.ts                checks out --base into a git worktree
+  cache.ts               per-step cache keys and storage
   compare.ts             what changed since --base, and whose it is
   report/terminal.ts     the terminal summary
   report/html.ts         the HTML report
@@ -186,7 +191,7 @@ scripts/record-gif.cjs   re-records docs/report.gif
 action.yml               the GitHub Action
 ```
 
-The end-to-end tests run real `expo prebuild`s on `test/fixtures/basic`. Run `npm install` in that folder first, or they're skipped. To try the demo, run `npm install` in `examples/demo`, then `node dist/cli.js examples/demo --html`.
+To try your local build on a project, run `node dist/cli.js path/to/expo-app`. The end-to-end tests run real `expo prebuild`s on `test/fixtures/basic`. Run `npm install` in that folder first, or they're skipped. To try the demo, run `npm install` in `examples/demo`, then `node dist/cli.js examples/demo --html`.
 
 ## License
 

@@ -22,6 +22,7 @@ const result: RunResult = {
   sdkVersion: '58.0.0',
   platform: 'all',
   prebuilds: 3,
+  cached: 0,
   durationMs: 1234,
 };
 

@@ -47,6 +47,15 @@ runs:
         npm ci --no-audit --no-fund --loglevel=error
         npm run build --silent
 
+    # Cache entries are keyed by content, so restoring the newest one is always
+    # safe and usually covers the base branch.
+    - name: Restore the prebuild cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.working-directory }}/node_modules/.cache/prebuild-blame
+        key: prebuild-blame-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+        restore-keys: prebuild-blame-${{ runner.os }}-
+
     - name: Compare native output
       id: blame
       shell: bash

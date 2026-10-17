@@ -18,6 +18,7 @@ function runOf(names: string[], snapshots: Record<string, string>[], sdkVersion 
     sdkVersion,
     platform: 'all',
     prebuilds: snapshots.length,
+    cached: 0,
     durationMs: 1000,
   };
 }

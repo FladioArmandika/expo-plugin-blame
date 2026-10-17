@@ -1,5 +1,6 @@
 import { BASELINE, type FileBlame, type FileChange, type Step } from '../blame.js';
 import type { RunResult } from '../run.js';
+import { runStats } from './stats.js';
 
 // Categorical hues that stay distinct on light and dark backgrounds.
 const PALETTE = ['#3b82f6', '#f97316', '#22c55e', '#a855f7', '#ec4899', '#eab308', '#14b8a6', '#ef4444', '#6366f1', '#06b6d4'];
@@ -26,7 +27,7 @@ export function renderHtml(result: RunResult): string {
   const body = `
 <header>
   <h1>prebuild-blame <span class="muted">${esc(project)}</span></h1>
-  <p class="muted">${sdk} · ${result.steps.length} plugins · ${result.prebuilds} prebuilds in ${(result.durationMs / 1000).toFixed(1)}s · ${esc(result.platform)}</p>
+  <p class="muted">${sdk} · ${result.steps.length} plugins · ${runStats(result.prebuilds, result.cached, result.durationMs)} · ${esc(result.platform)}</p>
   <nav class="legend" aria-label="Plugins">${result.steps.map((s) => legendChip(s, result.changes)).join('')}</nav>
   ${overlaps(result, name)}
 </header>

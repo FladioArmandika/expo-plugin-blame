@@ -1,6 +1,6 @@
 {
   "name": "prebuild-blame",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "git blame for expo prebuild: see which config plugin wrote which lines in android/ and ios/",
   "keywords": [
     "expo",

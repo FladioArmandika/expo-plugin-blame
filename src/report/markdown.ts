@@ -1,5 +1,6 @@
 import type { Comparison } from '../compare.js';
 import type { RunResult } from '../run.js';
+import { runStats } from './stats.js';
 
 /** Lets a bot find and update its earlier comment instead of posting a new one. */
 export const MARKER = '<!-- prebuild-blame -->';
@@ -39,8 +40,8 @@ function diffs(files: { file: string; patch: string; binary: boolean }[]): strin
   return out;
 }
 
-const footer = (prebuilds: number, ms: number, sdk: string | undefined) =>
-  `<sub>${sdk ? `SDK ${sdk.split('.')[0]} · ` : ''}${prebuilds} prebuilds in ${(ms / 1000).toFixed(1)}s · [prebuild-blame](https://github.com/FladioArmandika/prebuild-blame)</sub>`;
+const footer = (prebuilds: number, cached: number, ms: number, sdk: string | undefined) =>
+  `<sub>${sdk ? `SDK ${sdk.split('.')[0]} · ` : ''}${runStats(prebuilds, cached, ms)} · [prebuild-blame](https://github.com/FladioArmandika/prebuild-blame)</sub>`;
 
 /** A PR-comment-sized summary of how the native output changed since the base. */
 export function formatComparisonMarkdown(cmp: Comparison): string {
@@ -71,7 +72,7 @@ export function formatComparisonMarkdown(cmp: Comparison): string {
     lines.push(...diffs(cmp.files).flatMap((d) => [d, '']));
   }
 
-  lines.push('', footer(base.prebuilds + head.prebuilds, base.durationMs + head.durationMs, head.sdkVersion));
+  lines.push('', footer(base.prebuilds + head.prebuilds, base.cached + head.cached, base.durationMs + head.durationMs, head.sdkVersion));
   return lines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n';
 }
 
@@ -94,6 +95,6 @@ export function formatMarkdown(result: RunResult): string {
       lines.push(`- ${code(o.file)} is edited by ${o.steps.map((s) => code(name(s))).join(', ')}.`);
     }
   }
-  lines.push('', footer(result.prebuilds, result.durationMs, result.sdkVersion));
+  lines.push('', footer(result.prebuilds, result.cached, result.durationMs, result.sdkVersion));
   return lines.join('\n').replace(/\n{3,}/g, '\n\n') + '\n';
 }
