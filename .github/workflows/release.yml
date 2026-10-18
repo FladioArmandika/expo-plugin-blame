@@ -1,0 +1,48 @@
+name: Release
+
+# Tags and releases the version in package.json once it lands on main, and
+# moves the v1 tag the Action is used by. Also backfills a release for any
+# existing vX.Y.Z tag that doesn't have one yet.
+on:
+  push:
+    branches: [main]
+    paths: [package.json, .github/workflows/release.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Tag and release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          version="v$(node -p 'require("./package.json").version')"
+          if ! git rev-parse -q --verify "refs/tags/$version" >/dev/null; then
+            git tag "$version" "$GITHUB_SHA"
+            git push origin "$version"
+          fi
+
+          # The Action is used as @v1, so v1 follows the newest 1.x/0.x release.
+          git tag -f v1 "$version^{commit}"
+          git push -f origin v1
+
+          previous=""
+          for tag in $(git tag --list 'v*.*.*' --sort=v:refname); do
+            if ! gh release view "$tag" >/dev/null 2>&1; then
+              range="${previous:+$previous..}$tag"
+              notes=$(git log --no-merges --format='- %s' "$range")
+              gh release create "$tag" --title "$tag" --verify-tag \
+                --notes "$(printf '%s\n\n%s\n' "$notes" "Install: \`npx expo-plugin-blame@${tag#v}\`")"
+            fi
+            previous="$tag"
+          done
